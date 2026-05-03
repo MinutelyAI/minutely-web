@@ -19,6 +19,8 @@ import GroupsChatPage from "./pages/chat/groups";
 import SettingsPage from "./pages/misc/settings";
 import ArchivePage from "./pages/misc/archive";
 import TrashPage from "./pages/misc/trash";
+import JoinMeetingPage from "./pages/meetings/join-meeting";
+import ActiveMeetingPage from "./pages/meetings/active-meeting";
 
 /**
  * Root layout that wraps the entire app tree with providers.
@@ -69,6 +71,7 @@ const router = createBrowserRouter([
                 children: [
                   { index: true, element: <MeetingsDashboard /> },
                   { path: "start-meetings", element: <StartMeetingPage /> },
+                  { path: "active-meeting", element: <ActiveMeetingPage /> },
                   { path: "meetings-notes", element: <MeetingNotesPage /> },
                   { path: "calender", element: <CalenderPage /> },
                 ],
@@ -84,6 +87,7 @@ const router = createBrowserRouter([
               { path: "settings", element: <SettingsPage /> },
               { path: "archive", element: <ArchivePage /> },
               { path: "trash", element: <TrashPage /> },
+              { path: "join/:meetingId", element: <JoinMeetingPage /> },
             ],
           },
           { path: "/dashboard", element: <Navigate to="/meetings" replace /> },
