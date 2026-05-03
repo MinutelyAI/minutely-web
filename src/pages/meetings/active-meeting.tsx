@@ -3,17 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useMeeting } from '@/contexts/meeting-context';
 import { useMediaStream, useParticipantStreams } from '@/hooks/use-media-stream';
 import { useWebRTC } from '@/hooks/use-webrtc';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@minutely/shared/ui';
-import { Button } from '@minutely/shared/ui';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@minutely/shared/ui';
-import { Avatar, AvatarFallback, AvatarGroup } from '@minutely/shared/ui';
-import { Badge } from '@minutely/shared/ui';
-import { Separator } from '@minutely/shared/ui';
-import { Label } from '@minutely/shared/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Avatar, AvatarFallback, AvatarGroup, Badge, Separator, Label } from '@minutely/shared/ui';
 import { formatMeetingCode } from '@/lib/meeting-utils';
 import { getMeetingPeerEmail } from '@/lib/participant-identity';
 import { apiBaseUrl, minutelyApi } from '@/lib/api-client';
 import { VideoGrid } from '@/components/video-grid';
+import { cn } from '@minutely/shared';
 import {
   Mic,
   MicOff,
@@ -24,6 +19,8 @@ import {
   Copy,
   Check,
   AlertCircle,
+  Users,
+  Info,
 } from 'lucide-react';
 
 const toDisplayName = (email: string) =>
@@ -57,6 +54,8 @@ export default function ActiveMeetingPage() {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endType, setEndType] = useState<'leave' | 'endForAll'>('leave');
   const [copied, setCopied] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   
   // Track local mic/video state
   const [micEnabled, setMicEnabled] = useState(mediaStream.isAudioEnabled);
@@ -247,248 +246,246 @@ export default function ActiveMeetingPage() {
   };
 
   return (
-    <section className="flex h-full flex-col gap-4 p-3 sm:p-5">
-      {/* Meeting Header */}
-      <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold">{activeMeeting.title || 'Instant Meeting'}</h1>
-          <p className="text-sm text-muted-foreground">
-            Code: <span className="font-mono font-semibold">{formattedCode}</span>
-          </p>
+    <div className="fixed inset-0 flex flex-col bg-[#040404] text-white selection:bg-primary/30 overflow-hidden">
+      {/* Top Header Overlay */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 border border-primary/30 backdrop-blur-md">
+            <Video className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight leading-none">{activeMeeting.title || 'Instant Meeting'}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Live</span>
+              </div>
+              <Separator orientation="vertical" className="h-2.5 bg-white/20" />
+              <span className="text-[10px] text-white/50 font-medium">
+                {mergedParticipants.length + 1} participants
+              </span>
+            </div>
+          </div>
         </div>
-        <Badge variant="default" className="h-fit">
-          LIVE
-        </Badge>
+
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md h-10 w-10"
+            onClick={() => setShowInfo(!showInfo)}
+          >
+            <Info className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md h-10 w-10"
+            onClick={() => setShowParticipants(!showParticipants)}
+          >
+            <Users className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Media Stream Error Display */}
-      {mediaStream.error && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3">
-          <AlertCircle className="h-4 w-4 text-destructive" />
-          <p className="text-sm text-destructive">
-            {mediaStream.error}
-          </p>
-        </div>
-      )}
-
-      {/* Main Video Grid */}
-      <Card className="flex-1 overflow-hidden">
-        <CardContent className="h-full p-2 sm:p-4">
+      {/* Main Content Area */}
+      <div className="relative flex-1 flex overflow-hidden">
+        {/* Video Grid Section */}
+        <div className="flex-1 relative flex items-center justify-center p-4 pt-20 pb-28">
           {mediaStream.isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-muted-foreground">Requesting camera and microphone access...</p>
+            <div className="flex flex-col items-center gap-4 animate-in fade-in duration-700">
+              <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              <p className="text-white/60 font-medium tracking-wide">Initializing secure connection...</p>
             </div>
           ) : (
-            <VideoGrid
-              localStream={mediaStream.stream}
-              localDisplayName="You"
-              localAudioEnabled={micEnabled}
-              localVideoEnabled={videoEnabled}
-              remoteStreams={remoteParticipants}
-            />
+            <div className="w-full h-full max-w-7xl mx-auto">
+              <VideoGrid
+                localStream={mediaStream.stream}
+                localDisplayName="You"
+                localAudioEnabled={micEnabled}
+                localVideoEnabled={videoEnabled}
+                remoteStreams={remoteParticipants}
+              />
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Meeting Controls */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
-              <Button
-                variant={micEnabled ? 'default' : 'secondary'}
-                size="lg"
-                className="h-14 w-14 rounded-full p-0"
-                onClick={handleToggleMic}
-                title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
-              >
-                {micEnabled ? (
-                  <Mic className="h-6 w-6" />
-                ) : (
-                  <MicOff className="h-6 w-6" />
-                )}
-              </Button>
-
-              <Button
-                variant={videoEnabled ? 'default' : 'secondary'}
-                size="lg"
-                className="h-14 w-14 rounded-full p-0"
-                onClick={handleToggleVideo}
-                title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-              >
-                {videoEnabled ? (
-                  <Video className="h-6 w-6" />
-                ) : (
-                  <VideoOff className="h-6 w-6" />
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-14 w-14 rounded-full p-0"
-                onClick={handleCopyCode}
-                title="Copy meeting ID"
-              >
-                {copied ? (
-                  <Check className="h-6 w-6 text-green-600" />
-                ) : (
-                  <Copy className="h-6 w-6" />
-                )}
+        {/* Floating Side Panels */}
+        {showParticipants && (
+          <div className="absolute top-20 bottom-24 right-4 z-40 w-80 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <h2 className="font-semibold">Participants</h2>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setShowParticipants(false)}>
+                <X className="h-4 w-4" />
               </Button>
             </div>
-
-            <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setEndType('leave');
-                  setShowEndDialog(true);
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Leave Meeting
-              </Button>
-
-              <Button
-                variant="destructive"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setEndType('endForAll');
-                  setShowEndDialog(true);
-                }}
-              >
-                <X className="mr-2 h-4 w-4" />
-                End for All
-              </Button>
-            </div>
-          </div>
-
-          {/* Control Indicators */}
-          <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-            <Badge variant={micEnabled ? 'default' : 'secondary'}>
-              {micEnabled ? '🎤 Microphone On' : '🎤 Microphone Off'}
-            </Badge>
-            <Badge variant={videoEnabled ? 'default' : 'secondary'}>
-              {videoEnabled ? '📹 Camera On' : '📹 Camera Off'}
-            </Badge>
-            <Badge variant="secondary">
-              👥 {mergedParticipants.length + 1} Participants
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Side Info Panel */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Meeting Code Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Share Meeting</CardTitle>
-            <CardDescription>Invite others to join</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 p-4 text-center">
-              <p className="font-mono text-xl font-bold">{formattedCode}</p>
-            </div>
-            <Button className="w-full" onClick={handleCopyCode} variant={copied ? 'secondary' : 'default'}>
-              {copied ? (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Code
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Participants Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Participants ({mergedParticipants.length + 1})</CardTitle>
-            <CardDescription>People in this meeting</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 rounded-lg border p-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs">Y</AvatarFallback>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                <Avatar className="h-9 w-9 border border-primary/30">
+                  <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">Y</AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">You</p>
-                  <p className="text-xs text-muted-foreground">Host</p>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-semibold truncate">You</p>
+                  <p className="text-[10px] text-primary font-bold uppercase tracking-tight">Host</p>
                 </div>
-                <Badge variant="secondary" className="text-xs">Online</Badge>
+                <div className="flex gap-1.5">
+                  {micEnabled ? <Mic className="h-3.5 w-3.5 text-white/40" /> : <MicOff className="h-3.5 w-3.5 text-red-500" />}
+                </div>
               </div>
 
               {mergedParticipants.map((participant) => (
-                <div key={participant.id} className="flex items-center gap-3 rounded-lg border p-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {participant.displayName
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .slice(0, 2)}
+                <div key={participant.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group">
+                  <Avatar className="h-9 w-9 border border-white/10 group-hover:border-white/20 transition-colors">
+                    <AvatarFallback className="bg-white/5 text-xs font-bold">
+                      {participant.displayName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{participant.displayName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{participant.email}</p>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium truncate">{participant.displayName}</p>
+                    <p className="text-[10px] text-white/30 truncate">{participant.email}</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs">Online</Badge>
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-none text-[9px] h-4">Online</Badge>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {showInfo && (
+          <div className="absolute top-20 bottom-24 right-4 z-40 w-80 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <h2 className="font-semibold">Meeting Info</h2>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setShowInfo(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="space-y-2 text-center">
+                <Label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Share meeting ID</Label>
+                <div 
+                  className="p-4 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 hover:border-primary/50 transition-colors cursor-pointer group"
+                  onClick={handleCopyCode}
+                >
+                  <p className="text-2xl font-mono font-bold tracking-tighter text-primary group-hover:scale-105 transition-transform">{formattedCode}</p>
+                </div>
+              </div>
+              
+              <Button className="w-full h-12 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95" onClick={handleCopyCode}>
+                {copied ? <><Check className="mr-2 h-4 w-4" /> Copied!</> : <><Copy className="mr-2 h-4 w-4" /> Copy Invitation</>}
+              </Button>
+
+              <div className="pt-4 space-y-4">
+                <div className="flex items-center justify-between text-xs border-t border-white/10 pt-4">
+                  <span className="text-white/40">Status</span>
+                  <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/40">Encryption</span>
+                  <span className="text-green-500 font-medium">End-to-end</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Bottom Floating Toolbar */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 rounded-full bg-black/40 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-500">
+        <Button
+          variant={micEnabled ? 'ghost' : 'destructive'}
+          size="icon"
+          className={cn(
+            "h-12 w-12 rounded-full transition-all duration-300",
+            micEnabled ? "bg-white/5 hover:bg-white/10 text-white" : "hover:bg-red-600 shadow-lg shadow-red-500/20"
+          )}
+          onClick={handleToggleMic}
+        >
+          {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+        </Button>
+
+        <Button
+          variant={videoEnabled ? 'ghost' : 'destructive'}
+          size="icon"
+          className={cn(
+            "h-12 w-12 rounded-full transition-all duration-300",
+            videoEnabled ? "bg-white/5 hover:bg-white/10 text-white" : "hover:bg-red-600 shadow-lg shadow-red-500/20"
+          )}
+          onClick={handleToggleVideo}
+        >
+          {videoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+        </Button>
+
+        <Separator orientation="vertical" className="h-8 bg-white/10 mx-1" />
+
+        <Button
+          variant="destructive"
+          className="h-12 px-6 rounded-full font-bold tracking-tight hover:bg-red-600 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-red-500/20"
+          onClick={() => {
+            setEndType('leave');
+            setShowEndDialog(true);
+          }}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Leave
+        </Button>
+      </div>
+
+      {/* Media Stream Error Overlay */}
+      {mediaStream.error && (
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-2 rounded-2xl border border-red-500/50 bg-black/80 backdrop-blur-xl p-4 shadow-2xl text-red-500">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm font-semibold">
+              {mediaStream.error}
+            </p>
+            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white/10 ml-2" onClick={() => mediaStream.stopStream()}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* End Meeting Dialog */}
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-        <DialogContent>
+        <DialogContent className="bg-[#0c0c0c] border-white/10 text-white rounded-3xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl font-bold tracking-tight">
               {endType === 'leave' ? 'Leave Meeting' : 'End Meeting for All'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-white/50">
               {endType === 'leave'
-                ? 'You will leave the meeting, but other participants can continue.'
-                : 'All participants will be disconnected from this meeting. This action cannot be undone.'}
+                ? 'You will leave the meeting, but other participants can continue their session.'
+                : 'This will disconnect all participants immediately. This action cannot be undone.'}
             </DialogDescription>
           </DialogHeader>
 
           {endType === 'endForAll' && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <p className="text-sm text-destructive">
-                This will end the meeting for all {mergedParticipants.length + 1} participants.
+            <div className="flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-red-500">
+              <AlertCircle className="h-5 w-5" />
+              <p className="text-sm font-semibold">
+                This ends the session for {mergedParticipants.length + 1} people.
               </p>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button
-              variant="outline"
+              variant="ghost"
+              className="rounded-xl hover:bg-white/5 font-semibold"
               onClick={() => setShowEndDialog(false)}
             >
-              Cancel
+              Stay
             </Button>
             <Button
               variant="destructive"
+              className="rounded-xl font-bold px-6 shadow-lg shadow-red-500/20"
               onClick={handleEndMeeting}
             >
-              {endType === 'leave' ? 'Leave Meeting' : 'End for All'}
+              {endType === 'leave' ? 'Leave Now' : 'End for All'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </div>
   );
 }

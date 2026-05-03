@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { ActiveMeeting, ScheduledMeeting } from '../types';
-import { useAuth } from './auth-context';
+import { ActiveMeeting, ScheduledMeeting } from '@/types';
+import { minutelyApi } from '@/lib/api-client';
 
 type MeetingContextType = {
   activeMeeting: ActiveMeeting | null;
@@ -14,7 +14,6 @@ type MeetingContextType = {
 const MeetingContext = createContext<MeetingContextType | undefined>(undefined);
 
 export function MeetingProvider({ children }: { children: ReactNode }) {
-  const { api } = useAuth();
   const [activeMeeting, setActiveMeeting] = useState<ActiveMeeting | null>(null);
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
 
@@ -23,7 +22,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    api.getNextMeeting()
+    minutelyApi.getNextMeeting()
       .then((res) => res.json())
       .then((json) => {
         if (json && json.data) {
@@ -67,7 +66,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
       ? meeting.scheduledAt
       : new Date(meeting.scheduledAt);
 
-    const response = await api.scheduleMeeting({
+    const response = await minutelyApi.scheduleMeeting({
       title: meeting.title,
       description: meeting.meeting?.summary ?? '',
       scheduled_for: scheduledAt.toISOString(),
@@ -81,7 +80,7 @@ export function MeetingProvider({ children }: { children: ReactNode }) {
 
     // Update local state so the calendar reflects it immediately
     setScheduledMeetings((current) => [...current, meeting]);
-  }, [api]);
+  }, []);
 
   const endMeeting = useCallback((forAll: boolean) => {
     if (activeMeeting) {
