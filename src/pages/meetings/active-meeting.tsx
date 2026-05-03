@@ -8,7 +8,7 @@ import { formatMeetingCode } from '@/lib/meeting-utils';
 import { getMeetingPeerEmail } from '@/lib/participant-identity';
 import { apiBaseUrl, minutelyApi } from '@/lib/api-client';
 import { VideoGrid } from '@/components/video-grid';
-import { cn } from '@minutely/shared';
+import { cn, useTranscription, MeetingIntelligence } from '@minutely/shared';
 import {
   Mic,
   MicOff,
@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Users,
   Info,
+  Sparkles,
 } from 'lucide-react';
 
 const toDisplayName = (email: string) =>
@@ -56,6 +57,29 @@ export default function ActiveMeetingPage() {
   const [copied, setCopied] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showIntelligence, setShowIntelligence] = useState(false);
+  
+  // Transcription Hook
+  const { 
+    isTranscribing, 
+    status: transcriptionStatus, 
+    segments, 
+    startTranscription, 
+    stopTranscription 
+  } = useTranscription({
+    meetingId: activeMeeting?.id || '',
+    userEmail: localEmail || 'guest@minutely.ai',
+    userName: toDisplayName(localEmail || 'guest'),
+    apiBaseUrl: apiBaseUrl,
+    getAuthToken: () => localStorage.getItem('token'),
+  });
+
+  // Auto-start transcription if enabled in meeting settings
+  useEffect(() => {
+    if (activeMeeting?.settings.aiTranscription && mediaStream.stream && !isTranscribing) {
+      startTranscription(mediaStream.stream);
+    }
+  }, [activeMeeting, mediaStream.stream, isTranscribing, startTranscription]);
   
   // Track local mic/video state
   const [micEnabled, setMicEnabled] = useState(mediaStream.isAudioEnabled);
@@ -418,6 +442,20 @@ export default function ActiveMeetingPage() {
         <Separator orientation="vertical" className="h-8 bg-white/10 mx-1" />
 
         <Button
+          variant={showIntelligence ? 'default' : 'ghost'}
+          size="icon"
+          className={cn(
+            "h-12 w-12 rounded-full transition-all duration-300",
+            showIntelligence ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-white/5 hover:bg-white/10 text-white"
+          )}
+          onClick={() => setShowIntelligence(!showIntelligence)}
+        >
+          <Sparkles className={cn("h-5 w-5", isTranscribing && "animate-pulse")} />
+        </Button>
+
+        <Separator orientation="vertical" className="h-8 bg-white/10 mx-1" />
+
+        <Button
           variant="destructive"
           className="h-12 px-6 rounded-full font-bold tracking-tight hover:bg-red-600 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-red-500/20"
           onClick={() => {
@@ -444,6 +482,25 @@ export default function ActiveMeetingPage() {
           </div>
         </div>
       )}
+
+      {/* Meeting Intelligence Sidebar */}
+      <MeetingIntelligence
+        isOpen={showIntelligence}
+        onClose={() => setShowIntelligence(false)}
+        meetingId={activeMeeting?.id || ''}
+        segments={segments}
+        isTranscribing={isTranscribing}
+        status={transcriptionStatus}
+        onToggleTranscription={() => {
+          if (isTranscribing) {
+            stopTranscription();
+          } else if (mediaStream.stream) {
+            startTranscription(mediaStream.stream);
+          }
+        }}
+        apiBaseUrl={apiBaseUrl}
+        getAuthToken={() => localStorage.getItem('token')}
+      />
 
       {/* End Meeting Dialog */}
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
